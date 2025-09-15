@@ -1,7 +1,7 @@
 {
   "name": "fal-minimax-image-01-mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for fal-ai/minimax/image-01 - Advanced text-to-image generation model with superior capabilities via fal.ai API",
+  "description": "MCP server for fal-ai/minimax/image-01 - MiniMax (Hailuo AI) Text to Image generation model with high quality results via fal.ai API",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -27,12 +27,15 @@
     "mcp-server",
     "fal-ai",
     "minimax",
+    "hailuo-ai",
     "image-01",
     "image-generation",
     "text-to-image",
     "ai",
     "typescript",
-    "model-context-protocol"
+    "model-context-protocol",
+    "stylized",
+    "realism"
   ],
   "author": "PierrunoYT",
   "license": "MIT",

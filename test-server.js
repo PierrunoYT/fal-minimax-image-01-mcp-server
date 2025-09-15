@@ -67,11 +67,12 @@ async function testServer() {
       console.log('\n🎯 Example usage in MCP client:');
       console.log('  Tool: minimax_generate');
       console.log('  Parameters: {');
-      console.log('    "prompt": "A futuristic cityscape with flying cars and neon lights",');
+      console.log('    "prompt": "Man dressed in white t shirt, full-body stand front view image, outdoor, Venice beach sign, full-body image, Los Angeles, Fashion photography of 90s, documentary, Film grain, photorealistic",');
       console.log('    "aspect_ratio": "16:9",');
       console.log('    "num_images": 1,');
-      console.log('    "prompt_optimizer": true');
+      console.log('    "prompt_optimizer": false');
       console.log('  }');
+      console.log('\n💡 Note: prompt_optimizer defaults to false in the new API');
       console.log('\n✅ Test completed successfully!');
       console.log('💡 The server is ready to be used with your MCP client.');
       

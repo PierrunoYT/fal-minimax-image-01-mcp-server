@@ -58,15 +58,14 @@ async function downloadImage(url, filename) {
     });
 }
 // Generate safe filename for images
-function generateImageFilename(prompt, index, seed) {
+function generateImageFilename(prompt, index) {
     const safePrompt = prompt
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, '_')
         .substring(0, 50);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const seedStr = seed ? `_${seed}` : '';
-    return `minimax_${safePrompt}${seedStr}_${index}_${timestamp}.png`;
+    return `minimax_${safePrompt}_${index}_${timestamp}.png`;
 }
 // Create MCP server
 const server = new McpServer({
@@ -75,36 +74,32 @@ const server = new McpServer({
 });
 // Tool: Generate images with fal-ai/minimax/image-01
 server.tool("minimax_generate", {
-    description: "Generate high-quality images using fal-ai/minimax/image-01 - Advanced text-to-image generation model with superior capabilities",
+    description: "Generate high-quality images using fal-ai/minimax/image-01 - MiniMax (Hailuo AI) Text to Image model with superior capabilities",
     inputSchema: {
         type: "object",
         properties: {
             prompt: {
                 type: "string",
-                description: "The text prompt to generate an image from (max 1500 characters)",
+                description: "Text prompt for image generation (max 1500 characters). Longer text prompts will result in better quality images.",
                 maxLength: 1500
             },
             aspect_ratio: {
                 type: "string",
                 enum: ["1:1", "16:9", "4:3", "3:2", "2:3", "3:4", "9:16", "21:9"],
-                description: "The aspect ratio of the generated image",
+                description: "Aspect ratio of the generated image",
                 default: "1:1"
             },
             num_images: {
                 type: "integer",
-                description: "Number of images to generate",
+                description: "Number of images to generate (1-9)",
                 default: 1,
                 minimum: 1,
                 maximum: 9
             },
             prompt_optimizer: {
                 type: "boolean",
-                description: "Enable prompt optimization for better results"
-            },
-            sync_mode: {
-                type: "boolean",
-                description: "If set to true, the function will wait for the image to be generated and uploaded before returning the response",
-                default: true
+                description: "Whether to enable automatic prompt optimization",
+                default: false
             }
         },
         required: ["prompt"]
@@ -120,18 +115,15 @@ server.tool("minimax_generate", {
             isError: true
         };
     }
-    const { prompt, aspect_ratio = "1:1", num_images = 1, prompt_optimizer, sync_mode = true } = args;
+    const { prompt, aspect_ratio = "1:1", num_images = 1, prompt_optimizer = false } = args;
     try {
         // Prepare input for fal.ai API
         const input = {
             prompt,
             aspect_ratio,
             num_images,
-            sync_mode
+            prompt_optimizer
         };
-        // Add optional parameters if provided
-        if (prompt_optimizer !== undefined)
-            input.prompt_optimizer = prompt_optimizer;
         console.error(`Generating image with fal-ai/minimax/image-01 - prompt: "${prompt}"`);
         // Call fal.ai minimax/image-01 API
         const result = await fal.subscribe("fal-ai/minimax/image-01", {
@@ -149,15 +141,15 @@ server.tool("minimax_generate", {
         const downloadedImages = [];
         for (let i = 0; i < output.images.length; i++) {
             const image = output.images[i];
-            const filename = generateImageFilename(prompt, i + 1, output.seed);
+            const filename = generateImageFilename(prompt, i + 1);
             try {
                 const localPath = await downloadImage(image.url, filename);
                 downloadedImages.push({
                     url: image.url,
                     localPath,
                     index: i + 1,
-                    content_type: image.content_type || 'image/png',
-                    file_name: image.file_name || filename,
+                    content_type: image.content_type,
+                    file_name: image.file_name,
                     file_size: image.file_size,
                     filename
                 });
@@ -170,8 +162,8 @@ server.tool("minimax_generate", {
                     url: image.url,
                     localPath: null,
                     index: i + 1,
-                    content_type: image.content_type || 'image/png',
-                    file_name: image.file_name || filename,
+                    content_type: image.content_type,
+                    file_name: image.file_name,
                     file_size: image.file_size,
                     filename
                 });
@@ -186,9 +178,7 @@ server.tool("minimax_generate", {
             details += `\n  Original URL: ${img.url}`;
             details += `\n  Filename: ${img.filename}`;
             details += `\n  Content Type: ${img.content_type}`;
-            if (img.file_size) {
-                details += `\n  File Size: ${img.file_size} bytes`;
-            }
+            details += `\n  File Size: ${img.file_size} bytes`;
             return details;
         }).join('\n\n');
         const responseText = `Successfully generated ${downloadedImages.length} image(s) using fal-ai/minimax/image-01:
@@ -196,8 +186,7 @@ server.tool("minimax_generate", {
 Prompt: "${prompt}"
 Aspect Ratio: ${aspect_ratio}
 Number of Images: ${num_images}
-${prompt_optimizer !== undefined ? `Prompt Optimizer: ${prompt_optimizer ? 'Enabled' : 'Disabled'}` : ''}
-${output.seed ? `Seed: ${output.seed}` : 'Seed: Auto-generated'}
+Prompt Optimizer: ${prompt_optimizer ? 'Enabled' : 'Disabled'}
 Request ID: ${result.requestId}
 
 Generated Images:
@@ -238,25 +227,26 @@ server.tool("minimax_generate_queue", {
         properties: {
             prompt: {
                 type: "string",
-                description: "The text prompt to generate an image from (max 1500 characters)",
+                description: "Text prompt for image generation (max 1500 characters). Longer text prompts will result in better quality images.",
                 maxLength: 1500
             },
             aspect_ratio: {
                 type: "string",
                 enum: ["1:1", "16:9", "4:3", "3:2", "2:3", "3:4", "9:16", "21:9"],
-                description: "The aspect ratio of the generated image",
+                description: "Aspect ratio of the generated image",
                 default: "1:1"
             },
             num_images: {
                 type: "integer",
-                description: "Number of images to generate",
+                description: "Number of images to generate (1-9)",
                 default: 1,
                 minimum: 1,
                 maximum: 9
             },
             prompt_optimizer: {
                 type: "boolean",
-                description: "Enable prompt optimization for better results"
+                description: "Whether to enable automatic prompt optimization",
+                default: false
             },
             webhook_url: {
                 type: "string",
@@ -276,6 +266,13 @@ server.tool("minimax_generate_queue", {
         };
     }
     const { webhook_url, ...input } = args;
+    // Set defaults
+    if (input.aspect_ratio === undefined)
+        input.aspect_ratio = "1:1";
+    if (input.num_images === undefined)
+        input.num_images = 1;
+    if (input.prompt_optimizer === undefined)
+        input.prompt_optimizer = false;
     try {
         console.error(`Submitting queue request for fal-ai/minimax/image-01 - prompt: "${input.prompt}"`);
         const result = await fal.queue.submit("fal-ai/minimax/image-01", {
@@ -290,6 +287,9 @@ server.tool("minimax_generate_queue", {
 
 Request ID: ${result.request_id}
 Prompt: "${input.prompt}"
+Aspect Ratio: ${input.aspect_ratio}
+Number of Images: ${input.num_images}
+Prompt Optimizer: ${input.prompt_optimizer ? 'Enabled' : 'Disabled'}
 ${webhook_url ? `Webhook URL: ${webhook_url}` : 'No webhook configured'}
 
 Use the request ID with minimax_queue_status to check progress or minimax_queue_result to get the final result.`
@@ -421,15 +421,15 @@ server.tool("minimax_queue_result", {
         const downloadedImages = [];
         for (let i = 0; i < output.images.length; i++) {
             const image = output.images[i];
-            const filename = generateImageFilename(`queue_result_${request_id}`, i + 1, output.seed);
+            const filename = generateImageFilename(`queue_result_${request_id}`, i + 1);
             try {
                 const localPath = await downloadImage(image.url, filename);
                 downloadedImages.push({
                     url: image.url,
                     localPath,
                     index: i + 1,
-                    content_type: image.content_type || 'image/png',
-                    file_name: image.file_name || filename,
+                    content_type: image.content_type,
+                    file_name: image.file_name,
                     file_size: image.file_size,
                     filename
                 });
@@ -441,8 +441,8 @@ server.tool("minimax_queue_result", {
                     url: image.url,
                     localPath: null,
                     index: i + 1,
-                    content_type: image.content_type || 'image/png',
-                    file_name: image.file_name || filename,
+                    content_type: image.content_type,
+                    file_name: image.file_name,
                     file_size: image.file_size,
                     filename
                 });
@@ -456,16 +456,12 @@ server.tool("minimax_queue_result", {
             details += `\n  Original URL: ${img.url}`;
             details += `\n  Filename: ${img.filename}`;
             details += `\n  Content Type: ${img.content_type}`;
-            if (img.file_size) {
-                details += `\n  File Size: ${img.file_size} bytes`;
-            }
+            details += `\n  File Size: ${img.file_size} bytes`;
             return details;
         }).join('\n\n');
         const responseText = `Queue Result for Request ID: ${request_id}
 
 Successfully completed! Generated ${downloadedImages.length} image(s):
-
-${output.seed ? `Seed: ${output.seed}` : 'Seed: Auto-generated'}
 
 Generated Images:
 ${imageDetails}
